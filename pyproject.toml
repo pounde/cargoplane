@@ -1,0 +1,3 @@
+[build-system]
+requires = ["skypilot >= 0.2.1", "setuptools>=58.0"]
+build-backend = "setuptools.build_meta"
