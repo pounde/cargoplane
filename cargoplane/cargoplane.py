@@ -41,12 +41,11 @@ class CargoPlane:
         cmd += f"--entrypoint {self.entrypoint} " if self.entrypoint else ""
         cmd += f"{self.image} "
         cmd += " ".join(self.args) if self.args else ""
+        cmd += f" && {self.cleanup}" if self.cleanup else ""
         return cmd.strip()
 
     def run(self):
         cmd = self._gen_cmd()
-        if self.cleanup:
-            cmd += f" && {self.cleanup}"
 
         docker_run = sky.Task(setup=self.setup, run=cmd)
 

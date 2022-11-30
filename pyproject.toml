@@ -1,3 +1,22 @@
+[project]
+name = "CargoPlane"
+version = "0.1"
+authors = [
+  { name="Erick Pound", email="epound@gmail.com" },
+]
+description = "Docker abstraction for SkyPilot"
+readme = "README.md"
+requires-python = ">=3.9"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/pounde/cargoplane"
+"Bug Tracker" = "https://github.com/pounde/cargoplane/issues"
+
 [build-system]
-requires = ["skypilot >= 0.2.1", "setuptools>=58.0"]
+requires = ["setuptools<=64.0"]
 build-backend = "setuptools.build_meta"
