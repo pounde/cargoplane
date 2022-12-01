@@ -1,7 +1,8 @@
 import pytest
-from cargoplane.cargoplane import CargoPlane
+from cargoplane import CargoPlane
+
 
 class TestCargoPlane:
     def test_cargo_plane(self):
         test = CargoPlane("test")
-        assert CargoPlane
+        assert test.image == "test"

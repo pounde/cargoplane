@@ -31,7 +31,7 @@ class CargoPlane:
         self.down = down
 
         # if entrypoint contains white space it will be intrepreted as the image
-        if self.entrypoint.__contains__(" "):
+        if self.entrypoint and self.entrypoint.__contains__(" "):
             raise ValueError("Entrypoint cannot contain whitespace.")
 
     def _gen_cmd(self):
