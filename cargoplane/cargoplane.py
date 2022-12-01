@@ -22,7 +22,7 @@ class CargoPlane:
         self.file_mounts = file_mounts
         self.container_mounts = [
             f"-v {k}:{v}" for k, v in container_mounts.items()
-        ]  # Todo: maybe abstract this ie {container_mnt: {instance_mnt: {'source': s3-bucket}}}
+        ] if container_mounts else None  # Todo: maybe abstract this ie {container_mnt: {instance_mnt: {'source': s3-bucket}}}
         self.setup = setup
         self.args = args  # Todo: add ability to pass iterable or string
         self.docker_flags = docker_flags
