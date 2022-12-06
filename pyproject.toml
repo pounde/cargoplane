@@ -18,5 +18,5 @@ classifiers = [
 "Bug Tracker" = "https://github.com/pounde/cargoplane/issues"
 
 [build-system]
-requires = ["setuptools<=64.0"]
+requires = ["setuptools==64.0"]
 build-backend = "setuptools.build_meta"
