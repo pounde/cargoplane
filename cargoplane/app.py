@@ -1,12 +1,16 @@
 import sky
 
 
+# TODO: this should also support compose
+
+
 class CargoPlane:
     def __init__(
         self,
         image: str,
         resources: dict = None,
         file_mounts: dict = None,
+        storage_mounts: dict = None,
         container_mounts: dict = None,
         setup: str = None,
         entrypoint: str = None,
@@ -25,7 +29,7 @@ class CargoPlane:
             container_mounts (dict, optional): Mounts from remote instance to Docker container. Defaults to None.
             setup (str, optional): Command to run on remote instance prior to launching Docker container. Defaults to None.
             entrypoint (str, optional): Docker image entrypoint override, passed to 'docker run' with '--entrypoint'. Defaults to None.
-            args (iter, optional): Arguments to pass to docker application. Defaults to None.
+            args (iter, optional): Arguments to pass to docker entrypoint. Defaults to None.
             docker_flags (iter, optional): Additional flags to pass to docker. Defaults to None.
             cleanup (str, optional): Command(s) to run after Docker container exits. Multiple commands can be passed by separating them with '&&'. Defaults to None.
             use_spot (bool, optional): Use spot instance. Defaults to True.
@@ -34,58 +38,67 @@ class CargoPlane:
         Raises:
             ValueError: _description_
         """
-        self.image = image
-        self.entrypoint = entrypoint
-        self.resources = resources
-        self.file_mounts = file_mounts
-        self.container_mounts = [
-            f"-v {k}:{v}" for k, v in container_mounts.items()
-        ] if container_mounts else None  # Todo: maybe abstract this ie {container_mnt: {instance_mnt: {'source': s3-bucket}}}
-        self.setup = setup
-        self.args = args  # Todo: add ability to pass iterable or string
-        self.docker_flags = docker_flags
-        self.cleanup = cleanup  # Todo: add ability to pass iterable or string
+
+        self.cmd = self.gen_cmd(
+            image, container_mounts, entrypoint, args, docker_flags, cleanup
+        )
+        self.task = self.gen_task(
+            setup, self.cmd, file_mounts, storage_mounts, resources
+        )
         self.use_spot = use_spot
         self.down = down
-        self.cmd = self._gen_cmd()
+
+    @staticmethod
+    def gen_task(setup, cmd, file_mounts, storage_mounts, resources):
+        # set-up SkyPilot task
+        task = sky.Task(setup=setup, run=cmd)
+        if file_mounts:
+            task.set_file_mounts(file_mounts)
+
+        if storage_mounts:
+            task.set_storage_mounts(
+                {k: sky.Storage(**v) for k, v in storage_mounts.items()}
+            )
+
+        if resources:
+            task.set_resources(
+                sky.Resources.from_yaml_config(resources),
+            )
+
+        return task
+
+    @staticmethod
+    def gen_cmd(image, container_mounts, entrypoint, args, docker_flags, cleanup):
 
         # if entrypoint contains white space it will be interpreted as the image
-        if self.entrypoint and self.entrypoint.__contains__(" "):
+        if entrypoint and entrypoint.__contains__(" "):
             raise ValueError("Entrypoint cannot contain whitespace.")
 
-    def _gen_cmd(self):
+        container_mounts = (
+            [f"-v {k}:{v}" for k, v in container_mounts.items()]
+            if container_mounts
+            else None
+        )
         cmd = "docker run "
-        cmd += f'{" ".join(self.docker_flags)} ' if self.docker_flags else ""
-        cmd += f'{" ".join(self.container_mounts)} ' if self.container_mounts else ""
-        cmd += f"--entrypoint {self.entrypoint} " if self.entrypoint else ""
-        cmd += f"{self.image} "
-        cmd += " ".join(self.args) if self.args else ""
-        cmd += f" && {self.cleanup}" if self.cleanup else ""
+        cmd += f'{" ".join(docker_flags)} ' if docker_flags else ""
+        cmd += f'{" ".join(container_mounts)} ' if container_mounts else ""
+        cmd += f"--entrypoint {entrypoint} " if entrypoint else ""
+        cmd += f"{image} "
+        cmd += (
+            " ".join(args) if args else ""
+        )  # Todo: add ability to pass iterable or string
+        cmd += (
+            f" && {cleanup}" if cleanup else ""
+        )  # Todo: add ability to pass iterable or string
+
         return cmd.strip()
 
     def run(self):
-        """Runs Docker image on SkyPilot
-        """
-
-        docker_run = sky.Task(setup=self.setup, run=self.cmd)
-
-        if self.file_mounts:
-            docker_run.set_storage_mounts(
-                {
-                    k: sky.Storage(source=v.get("source"))
-                    for k, v in self.file_mounts.items()
-                }
-            )
-
-        # Set resources if required
-        if self.resources:
-            docker_run.set_resources(
-                sky.Resources.from_yaml_config(self.resources),
-            )
+        """Runs Docker image on SkyPilot"""
 
         if self.use_spot:
             sky.spot_launch(
-                docker_run,
+                self.task,
             )
         else:
-            sky.launch(docker_run, down=self.down)
+            sky.launch(self.task, down=self.down)
